@@ -137,3 +137,7 @@ I welcome contributions to improve the documentation! You can contribute [here](
 ## Acknowledgements
 
 Built as part of the CS463/663 course assignment.
+
+## Acknowledgements
+
+Built as part of the CS463/663 course assignment.
