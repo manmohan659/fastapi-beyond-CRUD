@@ -80,6 +80,8 @@ docker compose up
 
 This starts PostgreSQL, Redis, the FastAPI web server (with automatic migrations), and the Celery worker. The API is available at http://localhost:8000/api/v1/docs.
 
+> **Note:** All API endpoints are versioned under `/api/v1/`. Refer to the interactive docs at `/api/v1/docs` for the full endpoint reference.
+
 ## Running Tests
 Run the tests using this command:
 
@@ -151,3 +153,5 @@ This project is for educational purposes as part of the [FastAPI Beyond CRUD](ht
 ## Acknowledgements
 
 Built as part of the CS463/663 course assignment.
+Maintained by Manmohan Sharma.
+Last updated: February 2026.
