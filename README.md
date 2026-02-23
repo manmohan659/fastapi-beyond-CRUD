@@ -17,6 +17,10 @@ For more details, visit the project's [website](https://jod35.github.io/fastapi-
 ## Getting Started
 Follow the instructions below to set up and run your FastAPI project.
 
+### Tech Stack
+
+FastAPI, PostgreSQL, Redis, Celery, SQLAlchemy (async), Alembic, Docker, and GitHub Actions CI/CD.
+
 ### Prerequisites
 Ensure you have the following installed:
 
@@ -139,6 +143,10 @@ I welcome contributions to improve the documentation! You can contribute [here](
 2. Create a feature branch (`git checkout -b feat/your-feature`)
 3. Commit using [Conventional Commits](https://www.conventionalcommits.org/) format
 4. Open a Pull Request against `main`
+
+## License
+
+This project is for educational purposes as part of the [FastAPI Beyond CRUD](https://youtube.com/playlist?list=PLEt8Tae2spYnHy378vMlPH--87cfeh33P&si=rl-08ktaRjcm2aIQ) course by Ssali Jonathan.
 
 ## Acknowledgements
 
