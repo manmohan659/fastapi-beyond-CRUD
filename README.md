@@ -133,3 +133,7 @@ Both workflows use SMTP for email notifications. Configure these secrets in **Se
 
 ## Contributing
 I welcome contributions to improve the documentation! You can contribute [here](https://github.com/jod35/fastapi-beyond-crud-docs).
+
+## Acknowledgements
+
+Built as part of the CS463/663 course assignment.
