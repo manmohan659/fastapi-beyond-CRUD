@@ -3,68 +3,78 @@ services:
     build: .
     volumes:
       - .:/app
-    environment: 
-      DATABASE_URL: ${DATABASE_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_ALGORITHM: ${JWT_ALGORITHM}
-      MAIL_USERNAME: ${MAIL_USERNAME}
-      MAIL_PASSWORD: ${MAIL_PASSWORD}
-      MAIL_SERVER: ${MAIL_SERVER}
-      MAIL_PORT: ${MAIL_PORT}
-      MAIL_FROM: ${MAIL_FROM}
-      MAIL_FROM_NAME: ${MAIL_FROM_NAME}
-      DOMAIN: ${DOMAIN}
-      REDIS_URL: ${REDIS_URL}
-
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bookly:bookly123@db:5432/bookly_db
+      JWT_SECRET: supersecretjwt123changeinprod
+      JWT_ALGORITHM: HS256
+      MAIL_USERNAME: linwood.daniel74@ethereal.email
+      MAIL_PASSWORD: 44hJAF4AdgpD2t9dnk
+      MAIL_SERVER: smtp.ethereal.email
+      MAIL_PORT: 587
+      MAIL_FROM: linwood.daniel74@ethereal.email
+      MAIL_FROM_NAME: Bookly
+      DOMAIN: localhost:8000
+      REDIS_URL: redis://redis:6379/0
     ports:
       - "8000:8000"
-
     depends_on:
-      - db
-      - redis
-
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - app-network
 
   db:
     image: postgres:15
-
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
+      POSTGRES_USER: bookly
+      POSTGRES_DB: bookly_db
+      POSTGRES_PASSWORD: bookly123
     ports:
-     - "5432:5432"
-
+      - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bookly -d bookly_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - app-network
+
   redis:
     image: redis:6
-
     ports:
-     - "6379:6379"
-
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
-     - app-network
+      - app-network
 
   celery:
     build: .
-
     command: celery -A src.celery_tasks.c_app worker --loglevel=INFO
-
     volumes:
       - .:/app
-
     depends_on:
-      - redis
-
+      redis:
+        condition: service_healthy
     environment:
-      REDIS_URL: ${REDIS_URL}
-
+      DATABASE_URL: postgresql+asyncpg://bookly:bookly123@db:5432/bookly_db
+      JWT_SECRET: supersecretjwt123changeinprod
+      JWT_ALGORITHM: HS256
+      MAIL_USERNAME: linwood.daniel74@ethereal.email
+      MAIL_PASSWORD: 44hJAF4AdgpD2t9dnk
+      MAIL_SERVER: smtp.ethereal.email
+      MAIL_PORT: 587
+      MAIL_FROM: linwood.daniel74@ethereal.email
+      MAIL_FROM_NAME: Bookly
+      DOMAIN: localhost:8000
+      REDIS_URL: redis://redis:6379/0
     networks:
       - app-network
 

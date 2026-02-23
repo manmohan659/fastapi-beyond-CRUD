@@ -1,0 +1,139 @@
+name: PR Conventional Commits Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  check-conventional-commits:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR commits
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate conventional commits
+        id: validate
+        run: |
+          PATTERN='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\(.+\))?(!)?: .+'
+          BASE_SHA=${{ github.event.pull_request.base.sha }}
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+
+          echo "Checking commits from $BASE_SHA to $HEAD_SHA"
+
+          FAILED=0
+          FAILED_MSGS=""
+
+          while IFS= read -r line; do
+            HASH=$(echo "$line" | cut -d' ' -f1)
+            MSG=$(echo "$line" | cut -d' ' -f2-)
+
+            if ! echo "$MSG" | grep -qE "$PATTERN"; then
+              FAILED=1
+              FAILED_MSGS="${FAILED_MSGS}\n- \`${HASH:0:7}\`: ${MSG}"
+              echo "FAIL: $MSG"
+            else
+              echo "OK:   $MSG"
+            fi
+          done < <(git log --oneline "$BASE_SHA".."$HEAD_SHA")
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "bad_commits<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$FAILED_MSGS" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "valid=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "valid=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post failure comment and close PR
+        if: steps.validate.outputs.valid == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const badCommits = `${{ steps.validate.outputs.bad_commits }}`;
+            const body = `## Conventional Commits Violation
+
+            This PR has been **automatically closed** because one or more commits do not follow the [Conventional Commits](https://www.conventionalcommits.org/) specification.
+
+            ### Non-compliant commits:
+            ${badCommits}
+
+            ### Expected format:
+            \`\`\`
+            type(scope): description
+            \`\`\`
+
+            **Valid types:** \`feat\`, \`fix\`, \`docs\`, \`style\`, \`refactor\`, \`perf\`, \`test\`, \`build\`, \`ci\`, \`chore\`, \`revert\`
+
+            **Examples:**
+            - \`feat(auth): add JWT refresh token support\`
+            - \`fix: resolve database connection timeout\`
+            - \`docs: update API endpoint documentation\`
+
+            Please amend your commit messages and reopen the PR.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: 'closed'
+            });
+
+      - name: Get PR author email
+        if: steps.validate.outputs.valid == 'false'
+        id: author_email
+        run: |
+          HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          AUTHOR_EMAIL=$(git log -1 --format='%ae' "$HEAD_SHA")
+          echo "email=$AUTHOR_EMAIL" >> "$GITHUB_OUTPUT"
+          echo "PR author email: $AUTHOR_EMAIL"
+
+      - name: Send failure notification email
+        if: steps.validate.outputs.valid == 'false'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "PR #${{ github.event.pull_request.number }} closed - Conventional Commits violation"
+          to: ${{ steps.author_email.outputs.email }}
+          from: ${{ secrets.SMTP_USERNAME }}
+          body: |
+            Hello,
+
+            Your Pull Request #${{ github.event.pull_request.number }} ("${{ github.event.pull_request.title }}")
+            in repository ${{ github.repository }} has been automatically closed because
+            one or more commits do not follow the Conventional Commits specification.
+
+            Non-compliant commits:
+            ${{ steps.validate.outputs.bad_commits }}
+
+            Expected format: type(scope): description
+            Valid types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert
+
+            Please amend your commit messages and reopen the PR.
+
+            -- 
+            GitHub Actions Bot
+            ${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.pull_request.number }}
+
+      - name: Fail the check
+        if: steps.validate.outputs.valid == 'false'
+        run: |
+          echo "Conventional commits check failed. PR has been closed."
+          exit 1
